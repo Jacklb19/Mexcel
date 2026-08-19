@@ -240,16 +240,24 @@ export function useSpreadsheetEngine(
   );
 
   const resetToDefault = useCallback(() => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+    }
+    localStorage.removeItem(storageKey);
+
     const engine = engineRef.current;
-    engine.clear();
+    engine.clear(100, 26);
     DatasetGenerator.generateBudgetDataset(engine);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (strategy as any).markDirty?.();
+
     setCellData(new Map(engine.getAllCellData()));
     setTotalRows(engine.totalRows);
     setTotalCols(engine.totalCols);
     historyRef.current.clear();
     updateHistoryFlags();
-    localStorage.removeItem(storageKey);
-  }, [storageKey, updateHistoryFlags]);
+  }, [storageKey, strategy, updateHistoryFlags]);
 
   const getCellData = useCallback((cellId: string): CellData => {
     return engineRef.current.getCellData(cellId);

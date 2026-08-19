@@ -344,8 +344,10 @@ export class SpreadsheetEngine {
   /**
    * Clear all cells and reset the engine.
    */
-  clear(): void {
+  clear(rows: number = 100, cols: number = 26): void {
     this._cells.clear();
     this._graph.clear();
+    this._totalRows = rows;
+    this._totalCols = cols;
   }
 }
