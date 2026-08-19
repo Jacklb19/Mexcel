@@ -8,6 +8,7 @@
 
 import type { RecalculationStrategy } from './RecalculationStrategy';
 import type { SpreadsheetEngine, CellData } from '../SpreadsheetEngine';
+import { SpreadsheetError } from '../errors';
 
 /** Message sent to the worker */
 export interface WorkerRequest {
@@ -131,8 +132,7 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
             // Also update the main thread's engine with the results
             const cell = engine.getCell(cellData.id);
             if (cellData.error) {
-              const { SpreadsheetError: SE } = require('../errors');
-              cell.setError(new SE(cellData.error, cellData.error));
+              cell.setError(new SpreadsheetError(cellData.error, cellData.error));
             } else {
               cell.setComputedValue(cellData.computedValue);
             }

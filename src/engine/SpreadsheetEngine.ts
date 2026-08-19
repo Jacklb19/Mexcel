@@ -14,7 +14,6 @@ import type { RecalculationStrategy } from './strategies/RecalculationStrategy';
 import {
   SpreadsheetError,
   CircularReferenceError,
-  InvalidReferenceError,
 } from './errors';
 
 export interface CellData {
