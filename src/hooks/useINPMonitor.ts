@@ -32,7 +32,11 @@ export function useINPMonitor(): INPMonitorState {
   const [inp, setINP] = useState<INPData | null>(null);
   const [longTasks, setLongTasks] = useState<LongTaskEntry[]>([]);
   const taskIdCounter = useRef(0);
-  const startTime = useRef(performance.now());
+  const startTime = useRef(0);
+
+  useEffect(() => {
+    startTime.current = performance.now();
+  }, []);
 
   useEffect(() => {
     // Monitor INP using web-vitals

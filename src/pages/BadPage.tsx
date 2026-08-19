@@ -22,7 +22,6 @@ export const BadPage: React.FC = () => {
     setEditValue,
     selectCell,
     doubleClickCell,
-    startEditing,
     confirmEditing,
   } = useKeyboardNavigation({
     totalRows: state.totalRows,

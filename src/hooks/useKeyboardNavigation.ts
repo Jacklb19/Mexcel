@@ -187,7 +187,7 @@ export function useKeyboardNavigation(options: UseKeyboardNavigationOptions) {
           break;
       }
     },
-    [activeCell, editingCell, editValue, getCellRawInput, setCellValue, navigateTo, startEditing, cancelEditing, confirmEditing, undo, redo],
+    [activeCell, editingCell, getCellRawInput, setCellValue, navigateTo, startEditing, cancelEditing, confirmEditing, undo, redo],
   );
 
   // Attach keyboard listener to the document

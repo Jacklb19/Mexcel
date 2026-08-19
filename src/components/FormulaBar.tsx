@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { CellData } from '../engine/SpreadsheetEngine';
 
 interface FormulaBarProps {
@@ -12,24 +12,25 @@ export const FormulaBar: React.FC<FormulaBarProps> = ({
   cellData,
   onCommit,
 }) => {
-  const [value, setValue] = useState(cellData?.rawInput ?? '');
+  const [localValue, setLocalValue] = useState<string | null>(null);
 
-  useEffect(() => {
-    setValue(cellData?.rawInput ?? '');
-  }, [activeCellId, cellData?.rawInput]);
+  // If the user hasn't edited locally for this cell, display the cell's rawInput
+  const currentValue = localValue !== null ? localValue : (cellData?.rawInput ?? '');
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      onCommit(activeCellId, value);
+      onCommit(activeCellId, currentValue);
+      setLocalValue(null);
     } else if (e.key === 'Escape') {
-      setValue(cellData?.rawInput ?? '');
+      setLocalValue(null);
     }
   };
 
   const handleBlur = () => {
-    if (value !== (cellData?.rawInput ?? '')) {
-      onCommit(activeCellId, value);
+    if (localValue !== null && localValue !== (cellData?.rawInput ?? '')) {
+      onCommit(activeCellId, localValue);
     }
+    setLocalValue(null);
   };
 
   return (
@@ -47,8 +48,8 @@ export const FormulaBar: React.FC<FormulaBarProps> = ({
       {/* Formula input */}
       <input
         type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
+        value={currentValue}
+        onChange={(e) => setLocalValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         placeholder="Enter value or formula like =A1+B2 or =SUM(C2:C30)"
