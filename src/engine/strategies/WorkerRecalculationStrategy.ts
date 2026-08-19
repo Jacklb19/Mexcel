@@ -2,7 +2,7 @@
  * WorkerRecalculationStrategy — Delegates recalculation to a Web Worker.
  *
  * The main thread never runs the expensive recalculation loop.
- * Instead, it sends the engine state + changed cells to a Worker,
+ * Instead, it sends the changed cell to a Worker,
  * which runs the recalculation and returns only the diff.
  */
 
@@ -39,6 +39,7 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
   readonly name = 'worker';
   private _worker: Worker | null = null;
   private _ready = false;
+  private _synced = false;
   private _pendingInit: (() => void) | null = null;
 
   constructor() {
@@ -71,7 +72,6 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
   async syncState(engine: SpreadsheetEngine): Promise<void> {
     if (!this._worker) return;
 
-    // Wait for worker to be ready
     if (!this._ready) {
       await new Promise<void>((resolve) => {
         this._pendingInit = resolve;
@@ -84,16 +84,23 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
       snapshot,
     } satisfies WorkerRequest);
 
-    // Wait for worker to confirm initialization
     await new Promise<void>((resolve) => {
       const handler = (event: MessageEvent<WorkerResponse>) => {
         if (event.data.type === 'ready') {
           this._worker?.removeEventListener('message', handler);
+          this._synced = true;
           resolve();
         }
       };
       this._worker?.addEventListener('message', handler);
     });
+  }
+
+  /**
+   * Notify that the structure changed (e.g. stress load generated).
+   */
+  markDirty(): void {
+    this._synced = false;
   }
 
   async recalculate(
@@ -102,7 +109,6 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
     onProgress?: (completed: number, total: number) => void,
   ): Promise<Map<string, CellData>> {
     if (!this._worker) {
-      // Fallback: run synchronously if worker failed to init
       const order = engine.getRecalculationOrder(changedCellIds);
       const results = new Map<string, CellData>();
       for (const cellId of order) {
@@ -113,8 +119,10 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
       return results;
     }
 
-    // First sync the full state to the worker
-    await this.syncState(engine);
+    // Only sync the full snapshot if not yet synced (initial or after load gen)
+    if (!this._synced) {
+      await this.syncState(engine);
+    }
 
     return new Promise((resolve, reject) => {
       const results = new Map<string, CellData>();
@@ -129,7 +137,6 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
         if (data.type === 'result' && data.results) {
           for (const cellData of data.results) {
             results.set(cellData.id, cellData);
-            // Also update the main thread's engine with the results
             const cell = engine.getCell(cellData.id);
             if (cellData.error) {
               cell.setError(new SpreadsheetError(cellData.error, cellData.error));
@@ -149,9 +156,18 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
 
       this._worker?.addEventListener('message', handler);
 
+      const cellUpdate =
+        changedCellIds.length === 1
+          ? {
+              id: changedCellIds[0],
+              rawInput: engine.getCellData(changedCellIds[0]).rawInput,
+            }
+          : undefined;
+
       this._worker?.postMessage({
         type: 'recalculate',
         changedCellIds,
+        cellUpdate,
       } satisfies WorkerRequest);
     });
   }
@@ -163,5 +179,6 @@ export class WorkerRecalculationStrategy implements RecalculationStrategy {
     this._worker?.terminate();
     this._worker = null;
     this._ready = false;
+    this._synced = false;
   }
 }

@@ -40,7 +40,13 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         return;
       }
 
-      const { changedCellIds } = event.data;
+      const { changedCellIds, cellUpdate } = event.data;
+
+      // Apply single cell edit directly in worker if provided
+      if (cellUpdate) {
+        engine.setCellRawInput(cellUpdate.id, cellUpdate.rawInput);
+      }
+
       if (!changedCellIds) {
         sendMessage({ type: 'error', errorMessage: 'No changed cells provided' });
         return;

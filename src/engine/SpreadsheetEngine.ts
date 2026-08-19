@@ -316,30 +316,21 @@ export class SpreadsheetEngine {
    * Used during deserialization and full recalculation.
    */
   evaluateAllFormulas(): void {
-    // Collect all formula cells
-    const formulaCells: string[] = [];
-    for (const [id, cell] of this._cells) {
-      if (cell.hasFormula) {
-        formulaCells.push(id);
-      }
-    }
-
-    // Simple topological evaluation: keep iterating until stable
-    // (handles dependencies without needing full topo sort from scratch)
-    const maxIterations = formulaCells.length + 1;
-    for (let i = 0; i < maxIterations; i++) {
-      let changed = false;
-      for (const cellId of formulaCells) {
+    const allCells = Array.from(this._cells.keys());
+    try {
+      const order = this.getRecalculationOrder(allCells);
+      for (const cellId of order) {
         const cell = this._cells.get(cellId);
-        if (!cell || !cell.formula || cell.error) continue;
-
-        const oldValue = cell.computedValue;
-        this.evaluateCell(cell);
-        if (cell.computedValue !== oldValue) {
-          changed = true;
+        if (cell && cell.hasFormula && !cell.error) {
+          this.evaluateCell(cell);
         }
       }
-      if (!changed) break;
+    } catch {
+      for (const [, cell] of this._cells) {
+        if (cell.hasFormula && !cell.error) {
+          this.evaluateCell(cell);
+        }
+      }
     }
   }
 

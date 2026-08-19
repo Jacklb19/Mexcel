@@ -229,12 +229,14 @@ export function useSpreadsheetEngine(
     (count: number) => {
       const engine = engineRef.current;
       DatasetGenerator.generateStressLoad(engine, count);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (strategy as any).markDirty?.();
       setCellData(new Map(engine.getAllCellData()));
       setTotalRows(engine.totalRows);
       setTotalCols(engine.totalCols);
       scheduleAutosave();
     },
-    [scheduleAutosave],
+    [scheduleAutosave, strategy],
   );
 
   const resetToDefault = useCallback(() => {
