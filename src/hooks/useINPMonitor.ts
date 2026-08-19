@@ -62,8 +62,7 @@ export function useINPMonitor(): INPMonitorState {
         const entries = list.getEntries();
         const newTasks: LongTaskEntry[] = entries.map((entry) => {
           taskIdCounter.current++;
-          const relativeMs = Math.round(entry.startTime - (startTime.current - performance.timeOrigin));
-          const seconds = (relativeMs / 1000).toFixed(1);
+          const seconds = (entry.startTime / 1000).toFixed(1);
           return {
             id: taskIdCounter.current,
             duration: Math.round(entry.duration),
