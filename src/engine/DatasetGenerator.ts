@@ -164,8 +164,5 @@ export class DatasetGenerator {
 
     // Ensure grid is large enough
     engine.ensureSize(startRow + count + 5, startCol + 3);
-
-    // Evaluate all formulas
-    engine.evaluateAllFormulas();
   }
 }
