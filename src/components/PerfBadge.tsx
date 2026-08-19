@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useINPMonitor } from '../hooks/useINPMonitor';
 
 export const PerfBadge: React.FC = () => {
-  const { inp, longTasks, clearLongTasks } = useINPMonitor();
+  const { inp, latestInteraction, longTasks, clearMetrics } = useINPMonitor();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Rating color tokens
-  const getRatingBadge = (rating: string | undefined) => {
+  const getRatingStyle = (rating: 'good' | 'needs-improvement' | 'poor' | undefined) => {
     switch (rating) {
       case 'good':
         return {
@@ -34,7 +33,7 @@ export const PerfBadge: React.FC = () => {
         };
       default:
         return {
-          label: 'Waiting for interaction...',
+          label: 'Waiting for input...',
           bg: 'bg-slate-400',
           text: 'text-slate-600 dark:text-slate-400',
           border: 'border-slate-300 dark:border-slate-700',
@@ -43,47 +42,80 @@ export const PerfBadge: React.FC = () => {
     }
   };
 
-  const currentRating = getRatingBadge(inp?.rating);
+  const latestRating = getRatingStyle(latestInteraction?.rating);
+  const sessionRating = getRatingStyle(inp?.rating);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 max-w-[calc(100vw-2rem)]">
       {/* Expanded Details Panel */}
       {isOpen && (
-        <div className="w-80 sm:w-96 max-h-[75vh] flex flex-col bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md transition-all animate-in fade-in slide-in-from-bottom-2">
+        <div className="w-84 sm:w-96 max-h-[80vh] flex flex-col bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md transition-all animate-in fade-in slide-in-from-bottom-2">
           {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full animate-pulse bg-indigo-500" />
               <span className="font-semibold text-xs text-slate-800 dark:text-slate-200">
-                Performance & Event Loop Monitor
+                Performance &amp; Event Timing Monitor
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xs px-1"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clearMetrics}
+                className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline px-1"
+                title="Reset all measurements"
+              >
+                Reset Stats
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xs px-1"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
-          <div className="p-3 space-y-3 overflow-y-auto text-xs">
-            {/* INP Card */}
-            <div className={`p-2.5 rounded-lg border ${currentRating.badgeBg} ${currentRating.border}`}>
+          <div className="p-3.5 space-y-3 overflow-y-auto text-xs">
+            {/* Latest Interaction Card */}
+            <div className={`p-2.5 rounded-lg border ${latestRating.badgeBg} ${latestRating.border}`}>
               <div className="flex items-center justify-between mb-1">
                 <span className="font-bold text-slate-700 dark:text-slate-200">
-                  INP (Interaction to Next Paint)
+                  Latest Interaction Latency
                 </span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${currentRating.text}`}>
-                  {currentRating.label}
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${latestRating.text}`}>
+                  {latestRating.label}
                 </span>
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-black font-mono text-slate-900 dark:text-slate-100">
+                  {latestInteraction ? `${latestInteraction.duration} ms` : '—'}
+                </span>
+                {latestInteraction && (
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                    ({latestInteraction.name} event)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Session INP Card */}
+            <div className={`p-2.5 rounded-lg border ${sessionRating.badgeBg} ${sessionRating.border}`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-slate-700 dark:text-slate-200">
+                  Session INP (Worst Interaction)
+                </span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${sessionRating.text}`}>
+                  {sessionRating.label}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold font-mono text-slate-900 dark:text-slate-100">
                   {inp ? `${inp.value} ms` : '—'}
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  via Event Timing API
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Core Web Vital (p98)
                 </span>
               </div>
             </div>
@@ -94,23 +126,14 @@ export const PerfBadge: React.FC = () => {
                 <span className="font-bold text-slate-700 dark:text-slate-200">
                   Long Tasks (&gt;50ms): {longTasks.length}
                 </span>
-                {longTasks.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearLongTasks}
-                    className="text-[10px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline"
-                  >
-                    Clear
-                  </button>
-                )}
               </div>
 
               {longTasks.length === 0 ? (
                 <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[11px]">
-                  No long tasks recorded yet. Try editing cells or generating a stress load!
+                  No long tasks recorded. The main thread is running freely!
                 </div>
               ) : (
-                <div className="max-h-36 overflow-y-auto space-y-1 pr-1 font-mono text-[11px]">
+                <div className="max-h-32 overflow-y-auto space-y-1 pr-1 font-mono text-[11px]">
                   {longTasks.slice().reverse().map((task) => (
                     <div
                       key={task.id}
@@ -124,7 +147,7 @@ export const PerfBadge: React.FC = () => {
               )}
             </div>
 
-            {/* Quick explanation footer */}
+            {/* Threshold reference */}
             <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
               <p>
                 <strong>INP Thresholds:</strong> Good ≤200ms · Needs improvement ≤500ms · Poor &gt;500ms.
@@ -138,11 +161,17 @@ export const PerfBadge: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 bg-slate-900/90 dark:bg-slate-800/90 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition border border-slate-700 backdrop-blur-md"
+        className="flex items-center gap-2 px-3.5 py-2 bg-slate-900/95 dark:bg-slate-800/95 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition border border-slate-700 backdrop-blur-md"
       >
-        <span className={`w-2.5 h-2.5 rounded-full ${currentRating.bg}`} />
+        <span
+          className={`w-2.5 h-2.5 rounded-full ${
+            latestInteraction ? latestRating.bg : sessionRating.bg
+          }`}
+        />
         <span className="font-mono font-bold text-xs">
-          INP: {inp ? `${inp.value}ms` : 'N/A'}
+          {latestInteraction
+            ? `Latencia: ${latestInteraction.duration}ms`
+            : `INP: ${inp ? `${inp.value}ms` : 'N/A'}`}
         </span>
         {longTasks.length > 0 && (
           <span className="px-1.5 py-0.2 bg-rose-600 text-white text-[10px] font-bold rounded-full">
